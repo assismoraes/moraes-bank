@@ -1,6 +1,7 @@
 package com.assismoraes.moraesbank.models
 
 import com.assismoraes.moraesbank.enums.TransactionType
+import java.util.*
 import javax.persistence.*
 import javax.validation.constraints.NotNull
 
@@ -19,8 +20,13 @@ class Transaction(
     @ManyToOne
     var creditAccount: Account?,
 
+    @ManyToOne
+    var relatedAccount: Account?,
+
     @Enumerated(EnumType.STRING)
-    var type: TransactionType
+    var type: TransactionType,
+
+    var date: Date
 
 
 ) {

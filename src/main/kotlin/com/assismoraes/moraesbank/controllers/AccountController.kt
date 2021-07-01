@@ -1,5 +1,6 @@
 package com.assismoraes.moraesbank.controllers
 
+import com.assismoraes.moraesbank.dto.AccountStatementDto
 import com.assismoraes.moraesbank.services.AccountService
 import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
@@ -21,4 +22,10 @@ class AccountController(
         return ResponseEntity.ok(currentBalanceDto)
     }
 
+    @GetMapping("mine/account-statement")
+    fun accountStatement(@RequestHeader headers: HttpHeaders): ResponseEntity<Any> {
+        var userId = headers.getValuesAsList("user_id").first().toString().toLong()
+        var accountStatementDto: AccountStatementDto = service.accountStatement(userId)
+        return ResponseEntity.ok(accountStatementDto)
+    }
 }

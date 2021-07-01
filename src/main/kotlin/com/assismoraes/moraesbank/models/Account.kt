@@ -1,7 +1,6 @@
 package com.assismoraes.moraesbank.models
 
 import org.hibernate.annotations.ColumnDefault
-import java.math.BigDecimal
 import javax.persistence.*
 import kotlin.random.Random
 
@@ -20,6 +19,9 @@ data class Account(
 
     @OneToOne(mappedBy = "account")
     var owner: User? = null
+
+    @OneToMany(mappedBy = "relatedAccount")
+    var transactions: Set<Transaction> = HashSet()
 
     init {
         number = generateNumber()

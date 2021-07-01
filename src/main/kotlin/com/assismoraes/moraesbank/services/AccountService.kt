@@ -1,5 +1,6 @@
 package com.assismoraes.moraesbank.services
 
+import com.assismoraes.moraesbank.dto.AccountStatementDto
 import com.assismoraes.moraesbank.dto.CurrentBalanceDto
 import com.assismoraes.moraesbank.enums.TransactionType
 import com.assismoraes.moraesbank.exceptions.InvalidAccountException
@@ -13,6 +14,7 @@ import com.assismoraes.moraesbank.repositories.AccountRepository
 import com.assismoraes.moraesbank.repositories.TransactionRepository
 import com.assismoraes.moraesbank.repositories.UserRepository
 import org.springframework.stereotype.Service
+import java.util.*
 import javax.transaction.Transactional
 
 @Service
@@ -30,7 +32,7 @@ class AccountService(
         account.currentBalance += form.value
         repository.save(account)
 
-        var transaction = Transaction(value = form.value, creditAccount = account, type = TransactionType.DEPOSIT, debitAccount = null)
+        var transaction = Transaction(value = form.value, creditAccount = account, type = TransactionType.DEPOSIT, debitAccount = null, relatedAccount = account, date = Date())
         transactionRepository.save(transaction)
 
     }
@@ -47,7 +49,7 @@ class AccountService(
         account.currentBalance -= form.value
         repository.save(account)
 
-        var transaction = Transaction(value = form.value*(-1), creditAccount = null, type = TransactionType.WITHDRAW, debitAccount = account)
+        var transaction = Transaction(value = form.value*(-1), creditAccount = null, type = TransactionType.WITHDRAW, debitAccount = account, relatedAccount = account, date = Date())
         transactionRepository.save(transaction)
 
     }
@@ -72,10 +74,10 @@ class AccountService(
         repository.save(creditAccount)
 
         // SAVING TRANSACTIONS
-        var debitTransaction = Transaction(value = form.value*(-1), creditAccount = creditAccount, type = TransactionType.TRANSFER, debitAccount = debitAccount)
+        var debitTransaction = Transaction(value = form.value*(-1), creditAccount = creditAccount, type = TransactionType.TRANSFER, debitAccount = debitAccount, relatedAccount = debitAccount, date = Date())
         transactionRepository.save(debitTransaction)
 
-        var creditTransaction = Transaction(value = form.value, creditAccount = creditAccount, type = TransactionType.TRANSFER, debitAccount = debitAccount)
+        var creditTransaction = Transaction(value = form.value, creditAccount = creditAccount, type = TransactionType.TRANSFER, debitAccount = debitAccount, relatedAccount = creditAccount, date = Date())
         transactionRepository.save(creditTransaction)
 
     }
@@ -85,6 +87,15 @@ class AccountService(
         var account: Account = optUser.get().account!!
 
         return CurrentBalanceDto(account.currentBalance)
+    }
+
+    fun accountStatement(userId: Long): AccountStatementDto {
+        var optUser = userRepository.findById(userId)
+        var account: Account = optUser.get().account!!
+
+        return AccountStatementDto().convert(account)
+
+
     }
 
 }
