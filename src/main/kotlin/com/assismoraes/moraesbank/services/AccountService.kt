@@ -2,6 +2,7 @@ package com.assismoraes.moraesbank.services
 
 import com.assismoraes.moraesbank.dto.AccountStatementDto
 import com.assismoraes.moraesbank.dto.CurrentBalanceDto
+import com.assismoraes.moraesbank.dto.TransactionFromBankRabbitMessageDto
 import com.assismoraes.moraesbank.enums.TransactionType
 import com.assismoraes.moraesbank.exceptions.InvalidAccountException
 import com.assismoraes.moraesbank.exceptions.InsufficientFundsException
@@ -13,6 +14,7 @@ import com.assismoraes.moraesbank.models.Transaction
 import com.assismoraes.moraesbank.repositories.AccountRepository
 import com.assismoraes.moraesbank.repositories.TransactionRepository
 import com.assismoraes.moraesbank.repositories.UserRepository
+import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.stereotype.Service
 import java.util.*
 import javax.transaction.Transactional
@@ -21,7 +23,8 @@ import javax.transaction.Transactional
 class AccountService(
     private val repository: AccountRepository,
     private val transactionRepository: TransactionRepository,
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val rabbitTemplate: RabbitTemplate
 ) {
     @Transactional
     fun deposit(form: DepositForm) {
@@ -35,6 +38,16 @@ class AccountService(
         var transaction = Transaction(value = form.value, creditAccount = account, type = TransactionType.DEPOSIT, debitAccount = null, relatedAccount = account, date = Date())
         transactionRepository.save(transaction)
 
+        var message = TransactionFromBankRabbitMessageDto(
+            bankCode = transaction.bankCode,
+            accountNumber = account.number,
+            accountBranch = account.branch,
+            type = TransactionType.DEPOSIT,
+            value = transaction.value,
+            date = Date()
+        )
+
+        rabbitTemplate.convertAndSend("bank.transaction-to-cb", "rq-transactions-to-cb", message)
     }
 
     @Transactional
@@ -51,6 +64,17 @@ class AccountService(
 
         var transaction = Transaction(value = form.value*(-1), creditAccount = null, type = TransactionType.WITHDRAW, debitAccount = account, relatedAccount = account, date = Date())
         transactionRepository.save(transaction)
+
+        var message = TransactionFromBankRabbitMessageDto(
+            bankCode = transaction.bankCode,
+            accountNumber = account.number,
+            accountBranch = account.branch,
+            type = TransactionType.WITHDRAW,
+            value = transaction.value,
+            date = Date()
+        )
+
+        rabbitTemplate.convertAndSend("bank.transaction-to-cb", "rq-transactions-to-cb", message)
 
     }
 
@@ -94,8 +118,15 @@ class AccountService(
         var account: Account = optUser.get().account!!
 
         return AccountStatementDto().convert(account)
+    }
 
-
+    fun updateCbCode(bankCode: String, centralBankCode: String) {
+        var optTransaction = transactionRepository.findByBankCode(bankCode)
+        if(optTransaction.isPresent) {
+            var transaction = optTransaction.get()
+            transaction.centralBankCode = centralBankCode
+            transactionRepository.save(transaction)
+        }
     }
 
 }

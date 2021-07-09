@@ -30,4 +30,10 @@ class Transaction(
 
 
 ) {
+    var bankCode: String = ""
+    var centralBankCode: String = ""
+
+    init {
+        bankCode = UUID.randomUUID().toString()
+    }
 }
